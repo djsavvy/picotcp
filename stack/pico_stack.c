@@ -248,7 +248,7 @@ MOCKABLE int32_t pico_network_receive(struct pico_frame *f) {
 
 /// Interface towards socket for frame sending
 int32_t pico_network_send(struct pico_frame *f) {
-  if (!f || !f->sock || !f->sock->net) {
+  if (!f || !f->sock || !f->sock->net || !f->sock->proto) {
     pico_frame_discard(f);
     return -1;
   }
