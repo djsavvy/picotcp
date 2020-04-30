@@ -38,10 +38,9 @@ static int pico_tun_send(struct pico_device *dev, void *buf, int len) {
 
 static int pico_tun_poll(struct pico_device *dev, int loop_score) {
   struct pico_device_tun *tun = (struct pico_device_tun *)dev;
-  unsigned char *buf = (unsigned char *)PICO_ZALLOC(TUN_MTU);
   int len;
-  /*int flags = fcntl(tun->fd, F_GETFL, 0);*/
-  /*fcntl(tun->fd, F_SETFL, flags | O_NONBLOCK);*/
+  int flags = fcntl(tun->fd, F_GETFL, 0);
+  fcntl(tun->fd, F_SETFL, flags | O_NONBLOCK);
   uint32_t num_timers = pico_timers_size();
   int timer_fds[num_timers];
   int num_inserted = pico_timers_populate_timer_fds(timer_fds);
@@ -89,15 +88,31 @@ static int pico_tun_poll(struct pico_device *dev, int loop_score) {
         exit(1);
       }
       if (ready_events[i].data.fd == tun->fd) {
-        len = (int)read(tun->fd, buf, TUN_MTU);
-        if (len > 0) {
-          return pico_stack_recv_zerocopy(dev, buf, (uint32_t)len);
-        } else {
-          fprintf(stderr, "TUN read error: %s\n", strerror(errno));
-          exit(1);
+        int total_len = 0;
+        int success = 1;
+        for (;;) {
+          unsigned char *buf = (unsigned char *)PICO_ZALLOC(TUN_MTU);
+          len = (int)read(tun->fd, buf, TUN_MTU);
+          if (len > 0) {
+            total_len += len;
+            pico_stack_recv_zerocopy(dev, buf, (uint32_t)len);
+          } else if (len < 0) {
+            if (errno != EAGAIN) {
+              fprintf(stderr, "TUN read error: %s\n", strerror(errno));
+              success = 0;
+            }
+            break;
+          } else {
+            fprintf(stderr, "TUN read no data\n");
+          }
         }
         if (close(epoll_fd)) {
           fprintf(stderr, "Failed to close epoll file descriptor\n");
+          exit(1);
+        }
+        if (success) {
+          return total_len;
+        } else {
           exit(1);
         }
       } else {  // timer
