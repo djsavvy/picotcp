@@ -534,6 +534,7 @@ struct pico_timer_ref {
   uint32_t hash;
   struct pico_timer *tmr;
   int timer_fd;
+  int is_epoll;
 };
 
 typedef struct pico_timer_ref pico_timer_ref;
@@ -591,12 +592,16 @@ void pico_check_timers(int epoll_fd) {
     if (t && t->timer) t->timer(pico_tick, t->arg);
 
     if (t) {
-      if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, tref->timer_fd, NULL)) {
-        fprintf(stderr, "Failed to remove file descriptor from epoll: %s\n",
-                strerror(errno));
-        /*exit(1);*/
+      if (tref->is_epoll) {
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, tref->timer_fd, NULL)) {
+          fprintf(stderr,
+                  "Failed to remove file descriptor %d from epoll: %s\n",
+                  tref->timer_fd, strerror(errno));
+          exit(1);
+        }
       }
       close(tref->timer_fd);
+      tref->is_epoll = 0;
       PICO_FREE(t);
     }
 
@@ -611,13 +616,16 @@ void pico_check_timers(int epoll_fd) {
       struct epoll_event new_event;
       new_event.events = EPOLLIN;
       new_event.data.fd = tref->timer_fd;
-      int result =
-          epoll_ctl(epoll_fd, EPOLL_CTL_ADD, tref->timer_fd, &new_event);
-      // If it already existed, that's fine.
-      if (result == -1 && errno != EEXIST) {
-        fprintf(stderr, "Failed to add file descriptor to epoll: %s\n",
-                strerror(errno));
-        exit(1);
+      if (!tref->is_epoll) {
+        int result =
+            epoll_ctl(epoll_fd, EPOLL_CTL_ADD, tref->timer_fd, &new_event);
+        // If it already existed, that's fine.
+        if (result < 0) {
+          fprintf(stderr, "Failed to add file descriptor to epoll: %s\n",
+                  strerror(errno));
+          exit(1);
+        }
+        tref->is_epoll = 1;
       }
     }
   }
@@ -890,6 +898,7 @@ static uint32_t pico_timer_ref_add(pico_time expire, struct pico_timer *t,
   ts.it_value.tv_nsec = (long)(expire % 1000) * 1000000;
   timerfd_settime(timer_fd, 0, &ts, NULL);
   tref.timer_fd = timer_fd;
+  tref.is_epoll = 0;
 
   if (heap_insert(Timers, &tref) < 0) {
     dbg("Error: failed to insert timer(ID %u) into heap\n", id);

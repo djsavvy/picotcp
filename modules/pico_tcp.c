@@ -2286,6 +2286,8 @@ static int tcp_ack(struct pico_socket *s, struct pico_frame *f) {
   /* if Nagle enabled, check if no unack'ed data and fill out queue (till
    * window) */
   if (IS_NAGLE_ENABLED((&(t->sock)))) {
+    printf("NAGLE IS ENABLED AHHH\n");
+    exit(1);
     while (!IS_TCP_HOLDQ_EMPTY(t) &&
            ((t->tcpq_out.max_size - t->tcpq_out.size) >= t->mss)) {
       tcp_dbg_nagle("TCP_ACK - NAGLE add new segment\n");

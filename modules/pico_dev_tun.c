@@ -26,6 +26,7 @@
 
 struct pico_device_tun {
   struct pico_device dev;
+  int epoll_fd;
   int fd;
 };
 
@@ -39,39 +40,12 @@ static int pico_tun_send(struct pico_device *dev, void *buf, int len) {
 static int pico_tun_poll(struct pico_device *dev, int loop_score) {
   struct pico_device_tun *tun = (struct pico_device_tun *)dev;
   int len;
-  int flags = fcntl(tun->fd, F_GETFL, 0);
-  fcntl(tun->fd, F_SETFL, flags | O_NONBLOCK);
   uint32_t num_timers = pico_timers_size();
-  int timer_fds[num_timers];
-  int num_inserted = pico_timers_populate_timer_fds(timer_fds);
-  // number of timers + 1 for the TUN fd
-  int num_fds = num_inserted + 1;
-  // -1 Timeout means block indefinitely.
   int timeout = -1;
-  int max_events = num_fds * 10;
+  int max_events = (int)num_timers * 10;
+  int epoll_fd = tun->epoll_fd;
   struct epoll_event ready_events[max_events];
-  int epoll_fd = epoll_create1(0);
-  if (epoll_fd == -1) {
-    fprintf(stderr, "Failed to create epoll file descriptor\n");
-    exit(1);
-  }
-  struct epoll_event new_event;
-  new_event.events = EPOLLIN;
-  new_event.data.fd = tun->fd;
-  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, tun->fd, &new_event)) {
-    fprintf(stderr, "Failed to add TUN file descriptor to epoll\n");
-    close(epoll_fd);
-    exit(1);
-  }
-  for (int i = 0; i < num_inserted; i++) {
-    new_event.events = EPOLLIN;
-    new_event.data.fd = timer_fds[i];
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timer_fds[i], &new_event)) {
-      fprintf(stderr, "Failed to add file descriptor %d to epoll\n", i);
-      close(epoll_fd);
-      exit(1);
-    }
-  }
+  pico_check_timers(epoll_fd);
   int event_count;
   for (;;) {
     int should_check_timers = 0;
@@ -106,10 +80,6 @@ static int pico_tun_poll(struct pico_device *dev, int loop_score) {
             fprintf(stderr, "TUN read no data\n");
           }
         }
-        if (close(epoll_fd)) {
-          fprintf(stderr, "Failed to close epoll file descriptor\n");
-          exit(1);
-        }
         if (success) {
           return total_len;
         } else {
@@ -132,10 +102,6 @@ static int pico_tun_poll(struct pico_device *dev, int loop_score) {
     if (should_check_timers) {
       pico_check_timers(epoll_fd);
     }
-  }
-  if (close(epoll_fd)) {
-    fprintf(stderr, "Failed to close epoll file descriptor\n");
-    exit(1);
   }
   return loop_score;
 }
@@ -166,7 +132,6 @@ static int tun_open(char *name) {
 
 struct pico_device *pico_tun_create(char *name) {
   struct pico_device_tun *tun = PICO_ZALLOC(sizeof(struct pico_device_tun));
-
   if (!tun) return NULL;
 
   if (0 != pico_device_init((struct pico_device *)tun, name, NULL)) {
@@ -177,10 +142,27 @@ struct pico_device *pico_tun_create(char *name) {
 
   tun->dev.overhead = 0;
   tun->fd = tun_open(name);
+
   if (tun->fd < 0) {
     dbg("Tun creation failed.\n");
     pico_tun_destroy((struct pico_device *)tun);
     return NULL;
+  }
+  int flags = fcntl(tun->fd, F_GETFL, 0);
+  fcntl(tun->fd, F_SETFL, flags | O_NONBLOCK);
+  int epoll_fd = epoll_create1(0);
+  if (epoll_fd == -1) {
+    fprintf(stderr, "Failed to create epoll file descriptor\n");
+    exit(1);
+  }
+  tun->epoll_fd = epoll_fd;
+  struct epoll_event new_event;
+  new_event.events = EPOLLIN;
+  new_event.data.fd = tun->fd;
+  if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, tun->fd, &new_event)) {
+    fprintf(stderr, "Failed to add TUN file descriptor to epoll\n");
+    close(epoll_fd);
+    exit(1);
   }
 
   tun->dev.send = pico_tun_send;
