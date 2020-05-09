@@ -1026,8 +1026,8 @@ struct pico_socket *pico_tcp_open(uint16_t family) {
   t->tcpq_in.pool.root = t->tcpq_hold.pool.root = t->tcpq_out.pool.root = &LEAF;
   t->tcpq_hold.pool.compare = t->tcpq_out.pool.compare = segment_compare;
   t->tcpq_in.pool.compare = input_segment_compare;
-  t->tcpq_in.max_size = PICO_DEFAULT_SOCKETQ;
-  t->tcpq_out.max_size = PICO_DEFAULT_SOCKETQ;
+  t->tcpq_in.max_size = 60000;
+  t->tcpq_out.max_size = 60000;
   t->tcpq_hold.max_size = 2u * t->mss;
   rto_set(t, PICO_TCP_RTO_MIN);
 
@@ -2457,8 +2457,8 @@ static int tcp_syn(struct pico_socket *s, struct pico_frame *f) {
   mtu = (uint16_t)pico_socket_get_mss(&new->sock);
   new->mss = (uint16_t)(mtu - PICO_SIZE_TCPHDR);
   tcp_parse_options(f);
-  new->tcpq_in.max_size = PICO_DEFAULT_SOCKETQ;
-  new->tcpq_out.max_size = PICO_DEFAULT_SOCKETQ;
+  new->tcpq_in.max_size = 60000;
+  new->tcpq_out.max_size = 60000;
   new->tcpq_hold.max_size = 2u * mtu;
   new->rcv_nxt = long_be(hdr->seq) + 1;
   new->snd_nxt = long_be(pico_paws());
