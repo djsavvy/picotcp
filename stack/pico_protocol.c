@@ -54,13 +54,19 @@ static int proto_loop_in(struct pico_protocol *proto, int loop_score) {
 
 static int proto_loop_out(struct pico_protocol *proto, int loop_score) {
   struct pico_frame *f;
+  int dequeued = 0;
   while (loop_score > 0) {
     if (proto->q_out->frames == 0) break;
 
+    dequeued++;
     f = pico_dequeue(proto->q_out);
     if ((f) && (proto->process_out(proto, f) > 0)) {
       loop_score--;
     }
+  }
+  if (strcmp(proto->name, "tcp") == 0) {
+    printf("%s dequeued %d out of %d %p\n", proto->name, dequeued,
+           proto->q_out->size, proto->q_out);
   }
   return loop_score;
 }

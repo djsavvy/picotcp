@@ -71,6 +71,7 @@ int pico_stack_init(void);
 
 /* ----- Loop Function. ----- */
 void pico_stack_tick_no_in(void);
+void pico_stack_tick_no_out(void);
 void pico_stack_tick(void);
 void pico_stack_loop(void);
 

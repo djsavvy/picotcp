@@ -249,6 +249,7 @@ MOCKABLE int32_t pico_network_receive(struct pico_frame *f) {
 /// Interface towards socket for frame sending
 int32_t pico_network_send(struct pico_frame *f) {
   if (!f || !f->sock || !f->sock->net || !f->sock->proto) {
+    printf("frame discarded\n");
     pico_frame_discard(f);
     return -1;
   }
@@ -670,17 +671,18 @@ void pico_timer_cancel_hashed(uint32_t hash) {
 
 #define PROTO_DEF_NR 11
 #define PROTO_DEF_AVG_NR 4
-#define PROTO_DEF_SCORE 128
-#define PROTO_MIN_SCORE 128
-#define PROTO_MAX_SCORE 128
+#define PROTO_DEF_SCORE 12800
+#define PROTO_MIN_SCORE 12800
+#define PROTO_MAX_SCORE 12800
 #define PROTO_LAT_IND                                                        \
-  3 /* latency indication 0-3 (lower is better latency performance), x1, x2, \
+  0 /* latency indication 0-3 (lower is better latency performance), x1, x2, \
        x4, x8 */
 #define PROTO_MAX_LOOP \
   (PROTO_MAX_SCORE << PROTO_LAT_IND) /* max global loop score, so per tick */
 
 static int calc_score(int *score, int *index, int avg[][PROTO_DEF_AVG_NR],
                       int *ret) {
+  return PROTO_MAX_SCORE;
   int temp, i, j, sum;
   int max_total = PROTO_MAX_LOOP, total = 0;
 
@@ -872,6 +874,43 @@ void pico_stack_tick(void) {
 
   /* calculate new loop scores for next iteration */
   calc_score(score, index, (int(*)[])avg, ret);
+}
+
+void pico_stack_tick_no_out(void) {
+  static int score[PROTO_DEF_NR] = {
+      PROTO_DEF_SCORE, PROTO_DEF_SCORE, PROTO_DEF_SCORE, PROTO_DEF_SCORE,
+      PROTO_DEF_SCORE, PROTO_DEF_SCORE, PROTO_DEF_SCORE, PROTO_DEF_SCORE,
+      PROTO_DEF_SCORE, PROTO_DEF_SCORE, PROTO_DEF_SCORE};
+  static int ret[PROTO_DEF_NR] = {0};
+
+  /*pico_check_timers();*/
+
+  /* dbg("LOOP_SCORES> %3d - %3d - %3d - %3d - %3d - %3d - %3d - %3d - %3d - %3d
+   * -
+   * %3d\n",score[0],score[1],score[2],score[3],score[4],score[5],score[6],score[7],score[8],score[9],score[10]);
+   */
+
+  /* score = pico_protocols_loop(100); */
+
+  ret[0] = pico_devices_loop(score[0], PICO_LOOP_DIR_IN);
+  pico_rand_feed((uint32_t)ret[0]);
+
+  ret[1] = pico_protocol_datalink_loop(score[1], PICO_LOOP_DIR_IN);
+  pico_rand_feed((uint32_t)ret[1]);
+
+  ret[2] = pico_protocol_network_loop(score[2], PICO_LOOP_DIR_IN);
+  pico_rand_feed((uint32_t)ret[2]);
+
+  ret[3] = pico_protocol_transport_loop(score[3], PICO_LOOP_DIR_IN);
+  pico_rand_feed((uint32_t)ret[3]);
+
+  ret[5] = score[5];
+#if defined(PICO_SUPPORT_IPV4) || defined(PICO_SUPPORT_IPV6)
+#if defined(PICO_SUPPORT_TCP) || defined(PICO_SUPPORT_UDP)
+  ret[5] = pico_sockets_loop(score[5]); /* swapped */
+  pico_rand_feed((uint32_t)ret[5]);
+#endif
+#endif
 }
 
 void pico_stack_loop(void) {

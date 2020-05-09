@@ -176,6 +176,7 @@ static int32_t do_enqueue_segment(struct pico_tcp_queue *tq, void *f,
   int32_t ret = -1;
   PICOTCP_MUTEX_LOCK(Mutex);
   if ((tq->size + payload_len) > tq->max_size) {
+    printf("can't enqueue. tq max size: %d %p\n", tq->max_size, tq);
     ret = 0;
     goto out;
   }

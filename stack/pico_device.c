@@ -331,6 +331,7 @@ static int devloop_sendto_dev(struct pico_device *dev, struct pico_frame *f) {
 
 static int devloop_out(struct pico_device *dev, int loop_score) {
   struct pico_frame *f;
+  int sent = 0;
   while (loop_score > 0) {
     if (dev->q_out->frames == 0) break;
 
@@ -339,12 +340,14 @@ static int devloop_out(struct pico_device *dev, int loop_score) {
     if (!f) break;
 
     if (devloop_sendto_dev(dev, f) == 0) { /* success. */
+      sent++;
       f = pico_dequeue(dev->q_out);
       pico_frame_discard(f); /* SINGLE POINT OF DISCARD for OUTGOING FRAMES */
       loop_score--;
     } else
       break; /* Don't discard */
   }
+  printf("Device sent %d remaining %d\n", sent, dev->q_out->frames);
 
   return loop_score;
 }
