@@ -10,6 +10,8 @@
 
 void pico_tun_destroy(struct pico_device *tun);
 struct pico_device *pico_tun_create(char *name);
+int pico_tun_WFI(struct pico_device *dev, int timeout_ms);
+
 
 #endif
 

@@ -50,6 +50,33 @@ static int pico_tun_poll(struct pico_device *dev, int loop_score)
     return 0;
 }
 
+#ifdef PICO_SUPPORT_TICKLESS
+#include "pico_jobs.h"
+
+void pico_tun_dsr(void *arg)
+{
+   int len;
+   struct pico_device_tun *tun = (struct pico_device_tun *)arg;
+   unsigned char buf[TUN_MTU];
+   len = read(tun->fd, buf, TUN_MTU);
+   if (len > 0) {
+       pico_stack_recv(&tun->dev, buf, (uint32_t)len);
+   }
+}
+
+int pico_tun_WFI(struct pico_device *dev, int timeout_ms)
+{
+   struct pollfd pfd;
+   struct pico_device_tun *tun = (struct pico_device_tun *) dev;
+   pfd.fd = tun->fd;
+   pfd.events = POLLIN;
+   if (poll(&pfd, 1, timeout_ms) <= 0)
+       return 0;
+   pico_schedule_job(pico_tun_dsr, tun);
+   return 1;
+}
+#endif
+
 /* Public interface: create/destroy. */
 
 void pico_tun_destroy(struct pico_device *dev)
