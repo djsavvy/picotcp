@@ -13,6 +13,8 @@
 
 extern struct pico_protocol pico_proto_tcp;
 
+#define TCP_TIME (pico_time)(PICO_TIME_MS())
+
 PACKED_STRUCT_DEF pico_tcp_hdr {
     struct pico_trans trans;
     uint32_t seq;

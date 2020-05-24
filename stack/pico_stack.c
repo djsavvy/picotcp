@@ -567,6 +567,7 @@ int32_t pico_seq_compare(uint32_t a, uint32_t b) {
 
 uint32_t pico_timers_size(void) { return Timers->n; }
 
+// Unused
 int pico_timers_populate_timer_fds(int timer_fds[]) {
   struct pico_timer *t;
   struct pico_timer_ref *tref;

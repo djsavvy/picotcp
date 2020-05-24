@@ -24,8 +24,6 @@
 #define ACKN(f) \
   ((f) ? (long_be(((struct pico_tcp_hdr *)((f)->transport_hdr))->ack)) : 0)
 
-#define TCP_TIME (pico_time)(PICO_TIME_MS())
-
 #define PICO_TCP_RTO_MIN (70)
 #define PICO_TCP_RTO_MAX (120000)
 #define PICO_TCP_IW 2
@@ -963,15 +961,15 @@ static void sock_stats(uint32_t when, void *arg) {
       short_be(t->sock.remote_port), t->tcpq_out.size,
       SEQN((struct pico_frame *)first_segment(&t->tcpq_out)), t->snd_nxt,
       t->cwnd);
-  if (!pico_timer_add(2000, sock_stats, t)) {
-    tcp_dbg("TCP: Failed to start socket statistics timer\n");
-  }
+  /*if (!pico_timer_add(2000, sock_stats, t)) {*/
+  /*tcp_dbg("TCP: Failed to start socket statistics timer\n");*/
+  /*}*/
 }
 #endif
 
 static void tcp_send_probe(struct pico_socket_tcp *t);
 
-static void pico_tcp_keepalive(pico_time now, void *arg) {
+void pico_tcp_keepalive(pico_time now, void *arg) {
   struct pico_socket_tcp *t = (struct pico_socket_tcp *)arg;
   if (((t->sock.state & PICO_SOCKET_STATE_TCP) ==
        PICO_SOCKET_STATE_TCP_ESTABLISHED) &&
@@ -1041,11 +1039,11 @@ struct pico_socket *pico_tcp_open(uint16_t family) {
   t->linger_timeout = PICO_SOCKET_LINGER_TIMEOUT;
 
 #ifdef PICO_TCP_SUPPORT_SOCKET_STATS
-  if (!pico_timer_add(2000, sock_stats, t)) {
-    tcp_dbg("TCP: Failed to start socket statistics timer\n");
-    PICO_FREE(t);
-    return NULL;
-  }
+  /*if (!pico_timer_add(2000, sock_stats, t)) {*/
+  /*tcp_dbg("TCP: Failed to start socket statistics timer\n");*/
+  /*PICO_FREE(t);*/
+  /*return NULL;*/
+  /*}*/
 #endif
 
   t->keepalive_tmr = pico_timer_add(1000, pico_tcp_keepalive, t);
@@ -1954,7 +1952,7 @@ static inline int tcp_retrans_timeout_check_queue(struct pico_socket_tcp *t) {
   return 0;
 }
 
-static void tcp_retrans_timeout(pico_time val, void *sock) {
+void tcp_retrans_timeout(pico_time val, void *sock) {
   struct pico_socket_tcp *t = (struct pico_socket_tcp *)sock;
 
   t->retrans_tmr = 0;
@@ -2430,10 +2428,10 @@ static int tcp_syn(struct pico_socket *s, struct pico_frame *f) {
   if (!new) return -1;
 
 #ifdef PICO_TCP_SUPPORT_SOCKET_STATS
-  if (!pico_timer_add(2000, sock_stats, s)) {
-    tcp_dbg("TCP: Failed to start socket statistics timer\n");
-    return -1;
-  }
+    /*if (!pico_timer_add(2000, sock_stats, s)) {*/
+    /*tcp_dbg("TCP: Failed to start socket statistics timer\n");*/
+    /*return -1;*/
+    /*}*/
 #endif
 
   new->sock.remote_port = ((struct pico_trans *)f->transport_hdr)->sport;
