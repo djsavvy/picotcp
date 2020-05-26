@@ -248,12 +248,25 @@ MOCKABLE int32_t pico_network_receive(struct pico_frame *f) {
 
 /// Interface towards socket for frame sending
 int32_t pico_network_send(struct pico_frame *f) {
-  if (!f || !f->sock || !f->sock->net || !f->sock->proto) {
+  if (!f || !f->sock || !f->sock->net || !f->sock->proto || !f->sock->net->push) {
     pico_frame_discard(f);
     return -1;
   }
 
-  return f->sock->net->push(f->sock->net, f);
+  /*
+  if(f->sock->net->push != (void*)(0x7ffff7b7a4a2)) {
+    fprintf(stderr, "HAHAHAHAHAHAHAHAHAHAHAHAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+    return -1;
+  }
+  */
+
+  /* fprintf(stderr, "pico_stack.c::pico_network_send()::f->sock->net->push: %p\n", f->sock->net->push); */
+  int (*push)(struct pico_protocol *self, struct pico_frame *p) = f->sock->net->push;
+  fprintf(stderr, "pico_stack.c::pico_network_send()::push addr: %p\n", push);
+  struct pico_protocol* net = f->sock->net;
+  int result = push(net, f);
+  fprintf(stderr, "didn't die.\n");
+  return result;
 }
 
 int pico_source_is_local(struct pico_frame *f) {
@@ -598,7 +611,7 @@ void pico_check_timers(int epoll_fd) {
           fprintf(stderr,
                   "Failed to remove file descriptor %d from epoll: %s\n",
                   tref->timer_fd, strerror(errno));
-          exit(1);
+          /* exit(1); */
         }
       }
       close(tref->timer_fd);

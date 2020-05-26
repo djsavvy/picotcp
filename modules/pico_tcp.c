@@ -506,7 +506,9 @@ static int pico_tcp_process_out(struct pico_protocol *self,
     tcp_dbg("%s: non-pure ACK with len=0, fl:%04x\n", __FUNCTION__, hdr->flags);
   }
 
+  /* fprintf(stderr, "about to pico_network_send()\n"); */
   pico_network_send(f);
+  /* fprintf(stderr, "returned from pico_network_send()\n"); */
   return 0;
 }
 
