@@ -66,10 +66,13 @@ static int pico_tun_poll(struct pico_device *dev, int loop_score) {
         int success = 1;
         for (;;) {
           unsigned char *buf = (unsigned char *)PICO_ZALLOC(TUN_MTU);
+          /*unsigned char*/
+          /*buf[TUN_MTU];  // = (unsigned char *)PICO_ZALLOC(TUN_MTU);*/
           len = (int)read(tun->fd, buf, TUN_MTU);
           if (len > 0) {
             total_len += len;
             pico_stack_recv_zerocopy(dev, buf, (uint32_t)len);
+            /*pico_stack_recv(dev, buf, (uint32_t)len);*/
           } else if (len < 0) {
             if (errno != EAGAIN) {
               fprintf(stderr, "TUN read error: %s\n", strerror(errno));

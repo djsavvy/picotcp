@@ -999,6 +999,7 @@ void pico_tcp_keepalive(pico_time now, void *arg) {
     }
   }
 
+  // ADDME
   t->keepalive_tmr = pico_timer_add(1000, pico_tcp_keepalive, t);
   if (!t->keepalive_tmr) {
     tcp_dbg("TCP: Failed to start keepalive timer\n");
@@ -1046,6 +1047,7 @@ struct pico_socket *pico_tcp_open(uint16_t family) {
   /*}*/
 #endif
 
+  // ADDME
   t->keepalive_tmr = pico_timer_add(1000, pico_tcp_keepalive, t);
   if (!t->keepalive_tmr) {
     tcp_dbg("TCP: Failed to start keepalive timer\n");
@@ -1279,6 +1281,7 @@ int pico_tcp_initconn(struct pico_socket *s) {
   tcp_dbg("Sending SYN... (ports: %d - %d) size: %d\n",
           short_be(ts->sock.local_port), short_be(ts->sock.remote_port),
           syn->buffer_len);
+  // IGNORE THIS CASE FOR NOW?
   ts->retrans_tmr =
       pico_timer_add(PICO_TCP_SYN_TO << ts->backoff, initconn_retry, ts);
   if (!ts->retrans_tmr) {
@@ -1395,14 +1398,14 @@ static int tcp_do_send_rst(struct pico_socket *s, uint32_t seq) {
   hdr->crc = short_be(pico_tcp_checksum(f));
 
   /* TCP: ENQUEUE to PROTO */
-  printf("****_)*)*)*)*) Sending reset!\n");
+  printf("****_)*)*)*)*) Sending DOSEND reset!\n");
   pico_enqueue(&tcp_out, f);
   tcp_dbg("TCP SEND_RST >>>>>>>>>>>>>>> DONE\n");
   return 0;
 }
 
 static int tcp_send_rst(struct pico_socket *s, struct pico_frame *fr) {
-  printf("****_)*)*)*)*) Sending reset!\n");
+  printf("****_)*)*)*)*) Sending NON-PROBE reset!\n");
   struct pico_socket_tcp *t = (struct pico_socket_tcp *)s;
   struct pico_tcp_hdr *hdr_rcv;
   int ret;
@@ -1586,6 +1589,7 @@ static void tcp_deltcb(pico_time when, void *arg);
 
 static void tcp_linger(struct pico_socket_tcp *t) {
   pico_timer_cancel(t->fin_tmr);
+  // IGNORE THIS FOR NOW?
   t->fin_tmr = pico_timer_add(t->linger_timeout, tcp_deltcb, t);
   if (!t->fin_tmr) {
     tcp_dbg(
@@ -2028,6 +2032,7 @@ static void add_retransmission_timer(struct pico_socket_tcp *t,
   }
 
   if (!t->retrans_tmr) {
+    // ADDME
     t->retrans_tmr =
         pico_timer_add(t->retrans_tmr_due - now, tcp_retrans_timeout, t);
     if (!t->retrans_tmr) {
@@ -2340,7 +2345,7 @@ static void tcp_deltcb(pico_time when, void *arg) {
        PICO_SOCKET_STATE_TCP_CLOSING)) {
     tcp_dbg("Called deltcb in state = %04x (sending reset!)\n",
             (t->sock).state);
-    tcp_do_send_rst(&t->sock, long_be(t->snd_nxt));
+    /*tcp_do_send_rst(&t->sock, long_be(t->snd_nxt));*/
   } else {
     tcp_dbg("Called deltcb in state = %04x\n", (t->sock).state);
   }
