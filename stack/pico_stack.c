@@ -248,8 +248,13 @@ MOCKABLE int32_t pico_network_receive(struct pico_frame *f) {
 
 /// Interface towards socket for frame sending
 int32_t pico_network_send(struct pico_frame *f) {
-  if (!f || !f->sock || !f->sock->net || !f->sock->proto) {
+  if (!f || !f->sock || !f->sock->net) {
     pico_frame_discard(f);
+    return -1;
+  }
+
+  if (f->sock->net != (&pico_proto_ipv4) && f->sock->net != (&pico_proto_tcp)) {
+    fprintf(stderr, "ERROR: no longer IPv4 or TCP\n");
     return -1;
   }
 
