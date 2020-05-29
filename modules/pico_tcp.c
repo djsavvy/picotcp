@@ -1588,8 +1588,7 @@ static void tcp_linger(struct pico_socket_tcp *t) {
   pico_timer_cancel(t->fin_tmr);
   t->fin_tmr = pico_timer_add(t->linger_timeout, tcp_deltcb, t);
   if (!t->fin_tmr) {
-    tcp_dbg(
-        "TCP: failed to start delete callback timer, deleting socket now\n");
+    printf("TCP: failed to start delete callback timer, deleting socket now\n");
     tcp_deltcb((pico_time)0, t);
   }
 }
@@ -1621,7 +1620,7 @@ static void tcp_send_fin(struct pico_socket_tcp *t) {
   hdr->rwnd = short_be(t->wnd);
   hdr->crc = 0;
   hdr->crc = short_be(pico_tcp_checksum(f));
-  tcp_dbg("SENDING FIN...\n");
+  printf("SENDING FIN...\n");
   if (t->linger_timeout > 0) {
     pico_enqueue(&tcp_out, f);
     t->snd_nxt++;
@@ -2313,7 +2312,7 @@ static int tcp_ack(struct pico_socket *s, struct pico_frame *f) {
 
 static int tcp_finwaitack(struct pico_socket *s, struct pico_frame *f) {
   struct pico_socket_tcp *t = (struct pico_socket_tcp *)s;
-  tcp_dbg("RECEIVED ACK IN FIN_WAIT1\n");
+  printf("RECEIVED ACK IN FIN_WAIT1\n");
 
   /* acking part */
   tcp_ack(s, f);
@@ -2323,7 +2322,7 @@ static int tcp_finwaitack(struct pico_socket *s, struct pico_frame *f) {
     /* update TCP state */
     s->state &= 0x00FFU;
     s->state |= PICO_SOCKET_STATE_TCP_FIN_WAIT2;
-    tcp_dbg("TCP> IN STATE FIN_WAIT2\n");
+    printf("TCP> IN STATE FIN_WAIT2\n");
   }
 
   return 0;
@@ -2338,11 +2337,10 @@ static void tcp_deltcb(pico_time when, void *arg) {
        PICO_SOCKET_STATE_TCP_TIME_WAIT) &&
       (((t->sock).state & PICO_SOCKET_STATE_TCP) !=
        PICO_SOCKET_STATE_TCP_CLOSING)) {
-    tcp_dbg("Called deltcb in state = %04x (sending reset!)\n",
-            (t->sock).state);
+    printf("Called deltcb in state = %04x (sending reset!)\n", (t->sock).state);
     tcp_do_send_rst(&t->sock, long_be(t->snd_nxt));
   } else {
-    tcp_dbg("Called deltcb in state = %04x\n", (t->sock).state);
+    printf("Called deltcb in state = %04x\n", (t->sock).state);
   }
 
   /* update state */
@@ -2362,7 +2360,7 @@ static void tcp_deltcb(pico_time when, void *arg) {
 static int tcp_finwaitfin(struct pico_socket *s, struct pico_frame *f) {
   struct pico_socket_tcp *t = (struct pico_socket_tcp *)s;
   struct pico_tcp_hdr *hdr = (struct pico_tcp_hdr *)(f->transport_hdr);
-  tcp_dbg("TCP> received fin in FIN_WAIT2\n");
+  printf("TCP> received fin in FIN_WAIT2\n");
   /* received FIN, increase ACK nr */
   t->rcv_nxt = long_be(hdr->seq) + 1;
   s->state &= 0x00FFU;
@@ -2383,7 +2381,7 @@ static int tcp_finwaitfin(struct pico_socket *s, struct pico_frame *f) {
 
 static int tcp_closing_ack(struct pico_socket *s, struct pico_frame *f) {
   struct pico_socket_tcp *t = (struct pico_socket_tcp *)s;
-  tcp_dbg("TCP> received ack in CLOSING\n");
+  printf("TCP> received ack in CLOSING\n");
   /* acking part */
   tcp_ack(s, f);
 
@@ -2657,7 +2655,7 @@ static int tcp_finack(struct pico_socket *s, struct pico_frame *f) {
   struct pico_socket_tcp *t = (struct pico_socket_tcp *)s;
   IGNORE_PARAMETER(f);
 
-  tcp_dbg("TCP> ENTERED finack\n");
+  printf("TCP> ENTERED finack\n");
   t->rcv_nxt++;
   /* send ACK */
   tcp_send_ack(t);
@@ -3280,7 +3278,7 @@ void pico_tcp_cleanup_queues(struct pico_socket *sck) {
 static int checkLocalClosing(struct pico_socket *s) {
   struct pico_socket_tcp *t = (struct pico_socket_tcp *)s;
   if ((s->state & PICO_SOCKET_STATE_TCP) == PICO_SOCKET_STATE_TCP_ESTABLISHED) {
-    tcp_dbg("TCP> buffer empty, shutdown established ...\n");
+    printf("TCP> buffer empty, shutdown established ...\n");
     /* send fin if queue empty and in state shut local (write) */
     tcp_send_fin(t);
     /* change tcp state to FIN_WAIT1 */
