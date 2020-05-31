@@ -99,7 +99,10 @@ static int tap_open(char *name)
 
     memset(&ifr, 0, sizeof(ifr));
     ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-    strncpy(ifr.ifr_name, name, IFNAMSIZ - 1);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+    strncpy(ifr.ifr_name, name, IFNAMSIZ);
+#pragma GCC diagnostic pop
     if(ioctl(tap_fd, TUNSETIFF, &ifr) < 0) {
         return -1;
     }
